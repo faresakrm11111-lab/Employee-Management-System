@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة الموظفين</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="system.css">
+  
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    
+    .loading-content {
+      background: white;
+      padding: 30px 50px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    .loading-text {
+      color: #333;
+      font-size: 16px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Initial Loader -->
+  <div id="initialLoader" class="loading-overlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p class="loading-text">جاري تحميل النظام من Firebase...</p>
+    </div>
+  </div>
+
+  <!-- Login/Registration Screen -->
+  <div id="authScreen" class="auth-screen" style="display: none;">
+    <div class="auth-container">
+      <!-- Language Switcher -->
+      <div class="language-switcher">
+        <button class="lang-btn active" data-lang="ar">العربية</button>
+        <button class="lang-btn" data-lang="en">English</button>
+      </div>
+
+      <div class="auth-header">
+        <h1 data-ar="نظام إدارة الموظفين" data-en="Employee Management System">نظام إدارة الموظفين</h1>
+        <p class="subtitle" data-ar="مرحباً بك في نظام إدارة الفريق" data-en="Welcome to Team Management System">مرحباً بك في نظام إدارة الفريق</p>
+      </div>
+
+      <div class="role-selector">
+        <button class="role-btn active" data-role="member">
+          <i class="fas fa-user"></i>
+          <span data-ar="موظف" data-en="Employee">موظف</span>
+        </button>
+        <button class="role-btn" data-role="leader">
+          <i class="fas fa-users"></i>
+          <span data-ar="قائد فريق" data-en="Team Leader">قائد فريق</span>
+        </button>
+        <button class="role-btn" data-role="admin">
+          <i class="fas fa-user-shield"></i>
+          <span data-ar="مدير" data-en="Admin">مدير</span>
+        </button>
+      </div>
+
+      <form id="authForm" class="auth-form">
+        <!-- Common Fields -->
+        <div id="commonFields">
+          <div class="form-group">
+            <label data-ar="الاسم" data-en="Name">الاسم</label>
+            <input type="text" id="userName" placeholder="" data-placeholder-ar="أدخل اسمك" data-placeholder-en="Enter your name" required>
+          </div>
+          <div class="form-group">
+            <label data-ar="كلمة المرور (4 أرقام)" data-en="Password (4 digits)">كلمة المرور (4 أرقام)</label>
+            <input type="password" id="userPassword" placeholder="••••" maxlength="4" pattern="[0-9]{4}" required>
+          </div>
+        </div>
+
+        <!-- Registration Fields -->
+        <div id="registerFields" class="hidden">
+          <div class="form-group">
+            <label data-ar="رقم الواتساب" data-en="WhatsApp Number">رقم الواتساب</label>
+            <input type="tel" id="regWhatsapp" placeholder="01xxxxxxxxx">
+          </div>
+          <div class="form-group">
+            <label data-ar="البريد الإلكتروني" data-en="Email">البريد الإلكتروني</label>
+            <input type="email" id="regEmail" placeholder="" data-placeholder-ar="example@email.com" data-placeholder-en="example@email.com">
+          </div>
+          
+          <!-- Member specific fields -->
+          <div id="memberRegFields" class="hidden">
+            <div class="form-group">
+              <label data-ar="يوم الإجازة" data-en="Day Off">يوم الإجازة</label>
+              <select id="regDayOff">
+                <option value="" data-ar="اختر يوم الإجازة" data-en="Select Day Off">اختر يوم الإجازة</option>
+                <option value="السبت">السبت / Saturday</option>
+                <option value="الأحد">الأحد / Sunday</option>
+                <option value="الاثنين">الاثنين / Monday</option>
+                <option value="الثلاثاء">الثلاثاء / Tuesday</option>
+                <option value="الأربعاء">الأربعاء / Wednesday</option>
+                <option value="الخميس">الخميس / Thursday</option>
+                <option value="الجمعة">الجمعة / Friday</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-ar="وقت الحضور" data-en="Check-in Time">وقت الحضور</label>
+              <input type="time" id="regCheckIn">
+            </div>
+            <div class="form-group">
+              <label data-ar="وقت الانصراف" data-en="Check-out Time">وقت الانصراف</label>
+              <input type="time" id="regCheckOut">
+            </div>
+          </div>
+
+          <!-- Leader specific fields -->
+          <div id="leaderRegFields" class="hidden">
+            <div class="form-group">
+              <label data-ar="الشيفت" data-en="Shift">الشيفت</label>
+              <select id="regShift">
+                <option value="" data-ar="اختر الشيفت" data-en="Select Shift">اختر الشيفت</option>
+                <option value="صباحي" data-ar="صباحي" data-en="Morning">صباحي / Morning</option>
+                <option value="مسائي" data-ar="مسائي" data-en="Evening">مسائي / Evening</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" data-ar="دخول" data-en="Login">دخول</button>
+        <button type="button" id="toggleRegister" class="btn btn-secondary" data-ar="تسجيل موظف جديد" data-en="Register New Employee">تسجيل موظف جديد</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Member Dashboard -->
+  <div id="memberDashboard" class="dashboard hidden">
+    <nav class="navbar">
+      <div class="nav-content">
+        <div class="logo">نظام الموظفين</div>
+        <div class="nav-right">
+          <div class="user-info">
+            <div class="user-avatar" id="memberAvatar"></div>
+            <span id="memberNameNav"></span>
+          </div>
+          <button class="btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            تسجيل خروج
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <section class="hero-section">
+        <div class="section-label">لوحة التحكم</div>
+        <h1>مرحباً، <span class="highlight" id="memberNameHero"></span></h1>
+        <p class="hero-subtitle">هنا يمكنك متابعة مهامك ومواعيد عملك</p>
+      </section>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">وقت الحضور</div>
+            <div class="stat-value" id="memberCheckIn">--:--</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-sign-out-alt"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">وقت الانصراف</div>
+            <div class="stat-value" id="memberCheckOut">--:--</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">يوم الإجازة</div>
+            <div class="stat-value" id="memberDayOff">---</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attendance Actions -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>تسجيل الحضور والانصراف</h2>
+        </div>
+        <div class="attendance-actions">
+          <button class="btn-attendance btn-check-in" onclick="recordCheckIn()">
+            <i class="fas fa-sign-in-alt"></i>
+            <span>تسجيل حضور</span>
+          </button>
+          <button class="btn-attendance btn-check-out" onclick="recordCheckOut()">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>تسجيل انصراف</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Request Buttons -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>الطلبات</h2>
+        </div>
+        <div class="request-buttons">
+          <button class="btn-request btn-exception" onclick="openExceptionModal()">
+            <i class="fas fa-user-clock"></i>
+            <div>
+              <strong>طلب استئذان</strong>
+              <span>المغادرة في وقت مختلف</span>
+            </div>
+          </button>
+          <button class="btn-request btn-break" onclick="openBreakModal()">
+            <i class="fas fa-coffee"></i>
+            <div>
+              <strong>طلب بريك</strong>
+              <span>استراحة قصيرة</span>
+            </div>
+          </button>
+          <button class="btn-request btn-vacation" onclick="openVacationModal()">
+            <i class="fas fa-umbrella-beach"></i>
+            <div>
+              <strong>طلب إجازة</strong>
+              <span>تقديم طلب إجازة رسمية</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <div class="section-header">
+          <h2>المهام المسندة إليك</h2>
+        </div>
+        <div id="memberTasks" class="tasks-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leader Dashboard -->
+  <div id="leaderDashboard" class="dashboard hidden">
+    <nav class="navbar">
+      <div class="nav-content">
+        <div class="logo">نظام القيادة</div>
+        <div class="nav-right">
+          <div class="user-info">
+            <div class="user-avatar" id="leaderAvatar"></div>
+            <span id="leaderNameNav"></span>
+            <span class="user-badge" id="leaderShiftBadge"></span>
+          </div>
+          <button class="btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            تسجيل خروج
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <section class="hero-section">
+        <div class="section-label">لوحة القيادة</div>
+        <h1>أهلاً، <span class="highlight" id="leaderNameHero"></span></h1>
+        <p class="hero-subtitle">إدارة الفريق والمهام</p>
+      </section>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">إجمالي الموظفين</div>
+            <div class="stat-value" id="totalMembers">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">الحاضرون</div>
+            <div class="stat-value" id="presentMembers">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-user-times"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">المنصرفون</div>
+            <div class="stat-value" id="absentMembers">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <div class="section-header">
+          <h2>الموظفون</h2>
+          <div class="filters">
+            <button class="filter-btn active" data-filter="all" onclick="filterMembers('all')">الكل</button>
+            <button class="filter-btn" data-filter="present" onclick="filterMembers('present')">الحاضرون</button>
+            <button class="filter-btn" data-filter="absent" onclick="filterMembers('absent')">المنصرفون</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>الواتساب</th>
+                <th>الحالة</th>
+                <th>وقت الحضور</th>
+                <th>وقت الانصراف</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="membersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <div class="section-header">
+          <h2>إسناد مهمة جديدة</h2>
+        </div>
+        <form id="taskForm" class="task-form" onsubmit="event.preventDefault(); submitTask();">
+          <div class="form-row">
+            <div class="form-group">
+              <label>الموظف</label>
+              <select id="taskMember" required>
+                <option value="">اختر الموظف</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>نوع المهمة</label>
+              <select id="taskType" required>
+                <option value="">اختر النوع</option>
+                <option value="كومنتات">كومنتات</option>
+                <option value="نوتفكيشن">نوتفكيشن</option>
+                <option value="بوستات مخصصة">بوستات مخصصة</option>
+                <option value="انستا">انستا</option>
+                <option value="انبوكس قديم">انبوكس قديم</option>
+                <option value="انبوكس جديد">انبوكس جديد</option>
+                <option value="انبوكس انستا">انبوكس انستا</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>تفاصيل المهمة</label>
+            <textarea id="taskDetails" placeholder="اكتب تفاصيل المهمة هنا..." rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">إسناد المهمة</button>
+        </form>
+
+        <div class="section-header" style="margin-top: 40px;">
+          <h3>المهام المسندة</h3>
+        </div>
+        <div id="allTasks" class="tasks-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="adminDashboard" class="dashboard hidden">
+    <nav class="navbar">
+      <div class="nav-content">
+        <div class="logo">لوحة الإدارة</div>
+        <div class="nav-right">
+          <div class="user-info">
+            <div class="user-avatar">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <span>فارس أكرم</span>
+          </div>
+          <button class="btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            تسجيل خروج
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <section class="hero-section">
+        <div class="section-label">الإدارة الكاملة</div>
+        <h1>لوحة <span class="highlight">المدير</span></h1>
+        <p class="hero-subtitle">صلاحيات كاملة لإدارة النظام</p>
+      </section>
+
+      <!-- Basic Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">إجمالي الموظفين</div>
+            <div class="stat-value" id="adminTotalMembers">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">قادة الفرق</div>
+            <div class="stat-value" id="adminTotalLeaders">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">الحاضرون اليوم</div>
+            <div class="stat-value" id="adminPresentToday">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-times-circle"></i>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">المنصرفون اليوم</div>
+            <div class="stat-value" id="adminAbsentToday">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employees Table -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>الموظفون</h2>
+          <div style="display: flex; gap: 15px; align-items: center;">
+            <button class="btn btn-primary" onclick="openAddUserModal()">
+              <i class="fas fa-plus"></i>
+              إضافة موظف
+            </button>
+            <button class="btn btn-secondary" onclick="exportData()">
+              <i class="fas fa-file-excel"></i>
+              تصدير البيانات
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>الواتساب</th>
+                <th>البريد</th>
+                <th>يوم الإجازة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminMembersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Task Assignment for Admin -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>إسناد مهمة جديدة</h2>
+        </div>
+        <form id="adminTaskForm" class="task-form" onsubmit="event.preventDefault(); submitAdminTask();">
+          <div class="form-row">
+            <div class="form-group">
+              <label>الموظف</label>
+              <select id="adminTaskMember" required>
+                <option value="">اختر الموظف</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>نوع المهمة</label>
+              <select id="adminTaskType" required>
+                <option value="">اختر النوع</option>
+                <option value="كومنتات">كومنتات</option>
+                <option value="نوتفكيشن">نوتفكيشن</option>
+                <option value="بوستات مخصصة">بوستات مخصصة</option>
+                <option value="انستا">انستا</option>
+                <option value="انبوكس قديم">انبوكس قديم</option>
+                <option value="انبوكس جديد">انبوكس جديد</option>
+                <option value="انبوكس انستا">انبوكس انستا</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>تفاصيل المهمة</label>
+            <textarea id="adminTaskDetails" placeholder="اكتب تفاصيل المهمة هنا..." rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">إسناد المهمة</button>
+        </form>
+
+        <div class="section-header" style="margin-top: 40px;">
+          <h3>المهام المسندة</h3>
+        </div>
+        <div id="adminAllTasks" class="tasks-container"></div>
+      </div>
+
+      <!-- Requests Management -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>طلبات الموظفين</h2>
+          <span class="requests-count" id="requestsCount">0 طلب جديد</span>
+        </div>
+        <div id="adminRequests" class="requests-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exception Request Modal -->
+  <div id="exceptionModal" class="modal">
+    <div class="modal-overlay" onclick="closeExceptionModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>طلب استئذان</h2>
+        <button class="modal-close" onclick="closeExceptionModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="exceptionForm" onsubmit="event.preventDefault(); submitException();">
+        <div class="form-group">
+          <label>وقت المغادرة المطلوب</label>
+          <input type="time" id="exceptionTime" required>
+        </div>
+        <div class="form-group">
+          <label>السبب</label>
+          <textarea id="exceptionReason" placeholder="اكتب سبب الاستئذان..." rows="4" required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeExceptionModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Break Request Modal -->
+  <div id="breakModal" class="modal">
+    <div class="modal-overlay" onclick="closeBreakModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>طلب بريك</h2>
+        <button class="modal-close" onclick="closeBreakModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="breakForm" onsubmit="event.preventDefault(); submitBreak();">
+        <div class="form-group">
+          <label>مدة البريك</label>
+          <select id="breakDuration" required>
+            <option value="">اختر المدة</option>
+            <option value="15">15 دقيقة</option>
+            <option value="30">30 دقيقة</option>
+            <option value="45">45 دقيقة</option>
+            <option value="60">ساعة</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ملاحظات (اختياري)</label>
+          <textarea id="breakNotes" placeholder="أي ملاحظات إضافية..." rows="3"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeBreakModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Vacation Request Modal -->
+  <div id="vacationModal" class="modal">
+    <div class="modal-overlay" onclick="closeVacationModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>طلب إجازة</h2>
+        <button class="modal-close" onclick="closeVacationModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="vacationForm" onsubmit="event.preventDefault(); submitVacation();">
+        <div class="form-group">
+          <label>تاريخ البداية</label>
+          <input type="date" id="vacationStartDate" required>
+        </div>
+        <div class="form-group">
+          <label>تاريخ النهاية</label>
+          <input type="date" id="vacationEndDate" required>
+        </div>
+        <div class="form-group">
+          <label>السبب</label>
+          <textarea id="vacationReason" placeholder="اكتب سبب طلب الإجازة..." rows="4" required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeVacationModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Modal (Add/Edit) -->
+  <div id="userModal" class="modal">
+    <div class="modal-overlay" onclick="closeUserModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="userModalTitle">إضافة موظف جديد</h2>
+        <button class="modal-close" onclick="closeUserModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="userModalForm" onsubmit="event.preventDefault(); submitUserModal();">
+        <div class="form-group">
+          <label>الاسم</label>
+          <input type="text" id="modalName" required>
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور</label>
+          <input type="password" id="modalPassword" maxlength="4" pattern="[0-9]{4}" required>
+        </div>
+        <div class="form-group">
+          <label>رقم الواتساب</label>
+          <input type="tel" id="modalWhatsapp">
+        </div>
+        <div class="form-group">
+          <label>البريد الإلكتروني</label>
+          <input type="email" id="modalEmail">
+        </div>
+        <div class="form-group">
+          <label>يوم الإجازة</label>
+          <select id="modalDayOff">
+            <option value="">اختر يوم الإجازة</option>
+            <option value="السبت">السبت</option>
+            <option value="الأحد">الأحد</option>
+            <option value="الاثنين">الاثنين</option>
+            <option value="الثلاثاء">الثلاثاء</option>
+            <option value="الأربعاء">الأربعاء</option>
+            <option value="الخميس">الخميس</option>
+            <option value="الجمعة">الجمعة</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>وقت الحضور</label>
+          <input type="time" id="modalCheckIn">
+        </div>
+        <div class="form-group">
+          <label>وقت الانصراف</label>
+          <input type="time" id="modalCheckOut">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeUserModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dark Mode Toggle Button -->
+  <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="تبديل الوضع الليلي">
+    <i class="fas fa-moon"></i>
+  </button>
+
+  <script type="module">
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loader = document.getElementById('initialLoader');
+        const authScreen = document.getElementById('authScreen');
+        if (loader) loader.style.display = 'none';
+        if (authScreen) authScreen.style.display = 'block';
+      }, 1500);
+    });
+  </script>
+  
+  <script type="module" src="system.js"></script>
+</body>
+</html>
