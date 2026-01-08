@@ -4,6 +4,19 @@ import { FirebaseStorage } from './firebase-config.js';
 // Global variables
 let appData = null;
 let currentRole = 'member';
+// ===== Local Session (Per Device) =====
+function setCurrentUser(user) {
+  localStorage.setItem('currentUser', JSON.stringify(user));
+}
+
+function getCurrentUser() {
+  return JSON.parse(localStorage.getItem('currentUser'));
+}
+
+function clearCurrentUser() {
+  localStorage.removeItem('currentUser');
+}
+ 
 let isRegisterMode = false;
 let currentLang = 'ar';
 let isDarkMode = false;
@@ -16,12 +29,11 @@ async function initializeApp() {
     console.log('🔄 جاري التحميل من Firebase...');
     appData = await FirebaseStorage.getData();
     console.log('✅ تم تحميل البيانات:', appData);
-    
-    if (appData && appData.currentUser) {
-      console.log('👤 مستخدم مسجل:', appData.currentUser);
-      await showDashboard(appData.currentUser.role);
-    }
-    
+const user = getCurrentUser();
+if (user) {
+  await showDashboard(user.role);
+}
+
     currentLang = appData.language || 'ar';
     isDarkMode = appData.darkMode || false;
     applyDarkMode();
@@ -144,11 +156,18 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
 
 // Admin Login
 async function handleAdminLogin() {
+  setCurrentUser({ role: 'admin', name: 'فارس أكرم' });
+  await reloadData();
   const name = document.getElementById('userName').value.trim().toLowerCase();
   const password = document.getElementById('userPassword').value;
   
   if ((name === 'فارس أكرم' || name === 'fares akram') && password === '2388') {
-    await FirebaseStorage.setCurrentUser({ role: 'admin', name: 'فارس أكرم' });
+setCurrentUser({
+  role: 'member', // أو admin / leader حسب المكان
+  id: member?.id,
+  name
+});
+
     await reloadData();
     await showDashboard('admin');
   } else {
@@ -204,7 +223,17 @@ async function handleMemberLogin() {
   const member = appData.members.find(m => m.name === name && m.password === password);
   
   if (member) {
-    await FirebaseStorage.setCurrentUser({ role: 'member', id: member.id, name });
+    setCurrentUser({
+  role: 'member',
+  id: member.id,
+  name: member.name
+});
+
+setCurrentUser({
+  role: 'member', // أو admin / leader حسب المكان
+  id: member?.id,
+  name
+});
     await reloadData();
     await showDashboard('member');
   } else {
@@ -239,6 +268,18 @@ async function handleLeaderRegister() {
   await FirebaseStorage.setCurrentUser({ role: 'leader', id: newLeader.id, name, shift });
   
   alert('✅ تم التسجيل بنجاح!');
+  setCurrentUser({
+  role: 'member',
+  id: newMember.id,
+  name: newMember.name
+});
+setCurrentUser({
+  role: 'leader',
+  id: leader.id,
+  name: leader.name,
+  shift: leader.shift
+});
+
   await showDashboard('leader');
 }
 
@@ -252,7 +293,11 @@ async function handleLeaderLogin() {
   const leader = appData.leaders.find(l => l.name === name && l.password === password);
   
   if (leader) {
-    await FirebaseStorage.setCurrentUser({ role: 'leader', id: leader.id, name, shift: leader.shift });
+setCurrentUser({
+  role: 'member', // أو admin / leader حسب المكان
+  id: member?.id,
+  name
+});
     await reloadData();
     await showDashboard('leader');
   } else {
@@ -262,6 +307,12 @@ async function handleLeaderLogin() {
 
 // Show Dashboard
 async function showDashboard(role) {
+  const user = getCurrentUser();
+if (!user || user.role !== role) {
+  logout();
+  return;
+}
+
   await reloadData();
   
   document.getElementById('authScreen').classList.add('hidden');
@@ -276,7 +327,11 @@ async function showDashboard(role) {
     document.getElementById('leaderDashboard').classList.remove('hidden');
     loadLeaderDashboard();
   } else if (role === 'admin') {
-    document.getElementById('adminDashboard').classList.remove('hidden');
+const user = getCurrentUser();
+
+if (user && user.role === 'admin') {
+  document.getElementById('adminDashboard').classList.remove('hidden');
+}
     loadAdminDashboard();
   }
 }
